@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verity - Smart PDF Workspace</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 650px;
+            height: 85vh;
+            background: #2d3748;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #4a5568;
+            padding: 15px 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            max-width: 75%;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            border-radius: 12px;
+        }
+
+        /* User Message Bubble */
+        .message.user {
+            align-self: flex-end;
+            background: #3182ce;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        /* Bot Message Bubble */
+        .message.bot {
+            align-self: flex-start;
+            background: #4a5568;
+            color: #edf2f7;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Input Controls Container */
+        .controls-container {
+            padding: 15px;
+            background: #1a202c;
+            border-top: 1px solid #4a5568;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 12px;
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            color: white;
+            border-radius: 6px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        #user-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .btn {
+            border: none;
+            padding: 12px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-attach {
+            background: #4a5568;
+            color: white;
+            font-size: 16px;
+        }
+
+        .btn-send {
+            background: #3182ce;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <span>🤖 Verity AI</span>
+        <span style="font-size: 12px; color: #a0aec0;">Gemini 2.0 Enabled</span>
+    </div>
+    
+    <div class="chat-messages" id="chat-box">
+        <div class="message bot">Hello! How can I help you with your studies or files today?</div>
+    </div>
+    
+    <div class="controls-container">
+        <div id="file-preview" style="display: none; background: #4a5568; padding: 6px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; justify-content: space-between; align-items: center;">
+            <span>📄 <span id="file-name" style="font-weight: bold;"></span></span>
+            <span onclick="clearFile()" style="color: #fc8181; cursor: pointer; font-weight: bold; margin-left: 10px;">✕</span>
+        </div>
+
+        <div class="suggestion-chips" style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button onclick="applyPrompt('Summarize the key points of this document.')" style="background: #2d3748; color: #cbd5e0; border: 1px solid #4a5568; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">📊 Summarize PDF</button>
+            <button onclick="applyPrompt('What are the core technical concepts or formulas explained here?')" style="background: #2d3748; color: #cbd5e0; border: 1px solid #4a5568; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">✏️ Extract Concepts</button>
+        </div>
+
+        <div class="input-container">
+            <input type="file" id="pdf-input" accept=".pdf" style="display: none;" onchange="handleFileSelect()">
+            <button type="button" class="btn btn-attach" onclick="document.getElementById('pdf-input').click()">📎</button>
+            <input type="text" id="user-input" placeholder="Type a message or ask a question about your file..." onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button type="button" class="btn btn-send" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFile = null;
+
+function handleFileSelect() {
+    const fileInput = document.getElementById('pdf-input');
+    if (fileInput.files.length > 0) {
+        selectedFile = fileInput.files[0];
+        document.getElementById('file-name').innerText = selectedFile.name;
+        document.getElementById('file-preview').style.display = 'flex';
+    }
+}
+
+function clearFile() {
+    selectedFile = null;
+    document.getElementById('pdf-input').value = '';
+    document.getElementById('file-preview').style.display = 'none';
+}
+
+function applyPrompt(text) {
+    document.getElementById('user-input').value = text;
+    document.getElementById('user-input').focus();
+}
+
+function appendMessage(text, sender) {
+    const chatBox = document.getElementById('chat-box');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${sender}`;
+    msgDiv.innerText = text;
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendMessage() {
+    const inputField = document.getElementById('user-input');
+    const message = inputField.value.trim();
+    
+    if (!message && !selectedFile) return;
+
+    // Build layout text display strings
+    let displayMessage = message;
+    if (selectedFile && !message) {
+        displayMessage = `[Uploaded File: ${selectedFile.name}]`;
+    } else if (selectedFile && message) {
+        displayMessage = `[File: ${selectedFile.name}] ${message}`;
+    }
+
+    appendMessage(displayMessage, 'user');
+    inputField.value = '';
+
+    // Create Multi-part Form Data payload
+    const formData = new FormData();
+    formData.append('message', message);
+    if (selectedFile) {
+        formData.append('file', selectedFile);
+    }
+    
+    // Reset file element selections right away
+    clearFile();
+
+    try {
+        const response = await fetch('/get_response', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        appendMessage(data.reply, 'bot');
+    } catch (error) {
+        appendMessage("Error communicating with server side process.", 'bot');
+    }
+}
+</script>
+
+</body>
+</html>
