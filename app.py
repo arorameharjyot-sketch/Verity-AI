@@ -33,7 +33,7 @@ def get_bot_response():
     try:
         # 2. Generate a response using the correct Gemini model identifier
         response = client.models.generate_content(
-            model="gemini-2.5-pro",
+            model="gemini-2.5-flash",
             contents=user_message,
         )
         
